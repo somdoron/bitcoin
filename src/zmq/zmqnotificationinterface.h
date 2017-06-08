@@ -8,6 +8,7 @@
 #include "validationinterface.h"
 #include <string>
 #include <map>
+#include "../primitives/transaction.h"
 
 class CBlockIndex;
 class CZMQAbstractNotifier;
@@ -22,6 +23,8 @@ public:
 protected:
     bool Initialize();
     void Shutdown();
+
+    void TransactionAddedToWallet(const CTransactionRef& tx, const uint256 &hashBlock);
 
     // CValidationInterface
     void SyncTransaction(const CTransaction& tx, const CBlockIndex *pindex, int posInBlock);

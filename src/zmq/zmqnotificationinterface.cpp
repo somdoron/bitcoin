@@ -10,6 +10,10 @@
 #include "streams.h"
 #include "util.h"
 
+#ifdef ENABLE_WALLET
+#include "../wallet/wallet.h"
+#endif
+
 void zmqError(const char *str)
 {
     LogPrint("zmq", "zmq: Error: %s, errno=%s\n", str, zmq_strerror(errno));
@@ -37,8 +41,10 @@ CZMQNotificationInterface* CZMQNotificationInterface::Create()
 
     factories["pubhashblock"] = CZMQAbstractNotifier::Create<CZMQPublishHashBlockNotifier>;
     factories["pubhashtx"] = CZMQAbstractNotifier::Create<CZMQPublishHashTransactionNotifier>;
+    factories["pubhashwallettx"] = CZMQAbstractNotifier::Create<CZMQPublishHashWalletTransactionNotifier>;
     factories["pubrawblock"] = CZMQAbstractNotifier::Create<CZMQPublishRawBlockNotifier>;
     factories["pubrawtx"] = CZMQAbstractNotifier::Create<CZMQPublishRawTransactionNotifier>;
+    factories["pubrawwallettx"] = CZMQAbstractNotifier::Create<CZMQPublishRawWalletTransactionNotifier>;
 
     for (std::map<std::string, CZMQNotifierFactory>::const_iterator i=factories.begin(); i!=factories.end(); ++i)
     {
@@ -75,6 +81,10 @@ bool CZMQNotificationInterface::Initialize()
     LogPrint("zmq", "zmq: Initialize notification interface\n");
     assert(!pcontext);
 
+#ifdef ENABLE_WALLET
+    CWallet::TransactionAddedToWallet.connect(boost::bind(&CZMQNotificationInterface::TransactionAddedToWallet, this, _1, _2));
+#endif
+
     pcontext = zmq_init(1);
 
     if (!pcontext)
@@ -110,6 +120,11 @@ bool CZMQNotificationInterface::Initialize()
 void CZMQNotificationInterface::Shutdown()
 {
     LogPrint("zmq", "zmq: Shutdown notification interface\n");
+
+#ifdef ENABLE_WALLET
+    CWallet::TransactionAddedToWallet.disconnect(boost::bind(&CZMQNotificationInterface::TransactionAddedToWallet, this, _1, _2));
+#endif
+
     if (pcontext)
     {
         for (std::list<CZMQAbstractNotifier*>::iterator i=notifiers.begin(); i!=notifiers.end(); ++i)
@@ -160,3 +175,22 @@ void CZMQNotificationInterface::SyncTransaction(const CTransaction& tx, const CB
         }
     }
 }
+
+void CZMQNotificationInterface::TransactionAddedToWallet(const CTransactionRef& ptx, const uint256 &hashBlock) {
+    const CTransaction& tx = *ptx;
+
+    for (std::list<CZMQAbstractNotifier*>::iterator i = notifiers.begin(); i!=notifiers.end(); )
+    {
+        CZMQAbstractNotifier *notifier = *i;
+        if (notifier->NotifyWalletTransaction(tx, hashBlock))
+        {
+            i++;
+        }
+        else
+        {
+            notifier->Shutdown();
+            i = notifiers.erase(i);
+        }
+    }
+}
+
