@@ -1065,6 +1065,10 @@ public:
     boost::signals2::signal<void (CWallet *wallet, const uint256 &hashTx,
             ChangeType status)> NotifyTransactionChanged;
 
+    /** Transaction added to wallet */
+    boost::signals2::signal<void (const CTransactionRef &ptxn,
+                                  const uint256 &blockHash)> TransactionAddedToWallet;
+
     /** Show progress e.g. for rescan */
     boost::signals2::signal<void (const std::string &title, int nProgress)> ShowProgress;
 

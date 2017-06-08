@@ -13,6 +13,10 @@
 class CBlockIndex;
 class CZMQAbstractNotifier;
 
+#ifdef ENABLE_WALLET
+class CWallet;
+#endif
+
 class CZMQNotificationInterface : public CValidationInterface
 {
 public:
@@ -20,9 +24,16 @@ public:
 
     static CZMQNotificationInterface* Create();
 
+#ifdef ENABLE_WALLET
+    void RegisterWallet();
+#endif
+
+
 protected:
     bool Initialize();
     void Shutdown();
+
+    void TransactionAddedToWallet(const CTransactionRef& tx, const uint256 &hashBlock);
 
     // CValidationInterface
     void TransactionAddedToMempool(const CTransactionRef& tx) override;

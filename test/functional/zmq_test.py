@@ -38,9 +38,11 @@ class ZMQTest (BitcoinTestFramework):
         self.zmqSubSocket = self.zmqContext.socket(zmq.SUB)
         self.zmqSubSocket.setsockopt(zmq.SUBSCRIBE, b"hashblock")
         self.zmqSubSocket.setsockopt(zmq.SUBSCRIBE, b"hashtx")
+        self.zmqSubSocket.setsockopt(zmq.SUBSCRIBE, b"hashwallettx")
         self.zmqSubSocket.connect("tcp://127.0.0.1:%i" % self.port)
         self.nodes = self.start_nodes(self.num_nodes, self.options.tmpdir, extra_args=[
-            ['-zmqpubhashtx=tcp://127.0.0.1:'+str(self.port), '-zmqpubhashblock=tcp://127.0.0.1:'+str(self.port)],
+            ['-zmqpubhashtx=tcp://127.0.0.1:'+str(self.port), '-zmqpubhashblock=tcp://127.0.0.1:'+str(self.port),
+             '-zmqpubhashwallettx=tcp://127.0.0.1:'+str(self.port)],
             [],
             [],
             []
@@ -62,6 +64,13 @@ class ZMQTest (BitcoinTestFramework):
 
         msg = self.zmqSubSocket.recv_multipart()
         topic = msg[0]
+        assert_equal(topic, b"hashwallettx-block")
+        body = msg[1]
+        msgSequence = struct.unpack('<I', msg[-1])[-1]
+        assert_equal(msgSequence, 0) #must be sequence 0 on hashwallettx
+
+        msg = self.zmqSubSocket.recv_multipart()
+        topic = msg[0]
         body = msg[1]
         msgSequence = struct.unpack('<I', msg[-1])[-1]
         assert_equal(msgSequence, 0) #must be sequence 0 on hashblock
@@ -78,6 +87,8 @@ class ZMQTest (BitcoinTestFramework):
         for x in range(0,n*2):
             msg = self.zmqSubSocket.recv_multipart()
             topic = msg[0]
+            assert_not_equal(topic, b"hashwallettx-block") # as originated from another node must not belong to node0 wallet
+            assert_not_equal(topic, b"hashwallettx-mempool")
             body = msg[1]
             if topic == b"hashblock":
                 zmqHashes.append(bytes_to_hex_str(body))
@@ -104,6 +115,14 @@ class ZMQTest (BitcoinTestFramework):
 
         assert_equal(hashRPC, hashZMQ) #blockhash from generate must be equal to the hash received over zmq
 
+        msg = self.zmqSubSocket.recv_multipart()
+        topic = msg[0]
+        assert_equal(topic, b"hashwallettx-mempool")
+        body = msg[1]
+        hashZMQ = bytes_to_hex_str(body)
+        msgSequence = struct.unpack('<I', msg[-1])[-1]
+        assert_equal(msgSequence, 1)
+        assert_equal(hashRPC, hashZMQ)
 
 if __name__ == '__main__':
     ZMQTest ().main ()
