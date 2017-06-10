@@ -10,6 +10,7 @@ import time
 
 from test_framework.test_framework import BitcoinTestFramework, SkipTest
 from test_framework.util import (assert_equal,
+                                 assert_not_equal,
                                  bytes_to_hex_str,
                                  )
 
@@ -128,6 +129,7 @@ class ZMQTest (BitcoinTestFramework):
 
         assert_equal(hashRPC, hashZMQ)  # txid from sendtoaddress must be equal to the hash received over zmq
 
+        self.log.info("Wait for wallet tx from second node")
         msg = wait_for_multipart(self.zmqSubSocket)
         topic = msg[0]
         assert_equal(topic, b"hashwallettx-mempool")
@@ -137,8 +139,12 @@ class ZMQTest (BitcoinTestFramework):
         assert_equal(msgSequence, 1)
         assert_equal(hashRPC, hashZMQ)
 
+        self.log.info("Destory zmq context")
+
         # Destroy the zmq context
         self.zmqContext.destroy(linger=None)
+
+        self.log.info("done")
 
 if __name__ == '__main__':
     ZMQTest().main()

@@ -378,7 +378,7 @@ class TestHandler:
                               time.time(),
                               subprocess.Popen([self.tests_dir + test_argv[0]] + test_argv[1:] + self.flags + portseed_arg + tmpdir,
                                                universal_newlines=True,
-                                               stdout=log_stdout,
+                                               stdout=sys.stdout,
                                                stderr=log_stderr),
                               log_stdout,
                               log_stderr))
