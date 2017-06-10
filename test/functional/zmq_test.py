@@ -64,9 +64,6 @@ class ZMQTest (BitcoinTestFramework):
             []
             ])
 
-        self.log.error("finish setup")
-
-
     def run_test(self):
         self.sync_all()
 
@@ -156,10 +153,15 @@ class ZMQTest (BitcoinTestFramework):
         hashZMQ = bytes_to_hex_str(body)
         msgSequence = struct.unpack('<I', msg[-1])[-1]
 
-        self.log.info("9\n")
-
         assert_equal(msgSequence, 1)
         assert_equal(hashRPC, hashZMQ)
+
+        self.log.info("9\n")
+
+        # Destroy the zmq context
+        self.zmqContext.destroy(linger=None)
+
+        self.log.info("10\n")
 
 if __name__ == '__main__':
     ZMQTest ().main ()
