@@ -7,9 +7,12 @@ import configparser
 import os
 import struct
 import time
+import logging
 
 from test_framework.test_framework import BitcoinTestFramework, SkipTest
 from test_framework.util import *
+
+logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 
 def wait_for_multipart(socket, timeout=60):
     interval = 0.1
@@ -61,12 +64,16 @@ class ZMQTest (BitcoinTestFramework):
             []
             ])
 
+        self.log.error("finish setup")
+
 
     def run_test(self):
         self.sync_all()
 
         genhashes = self.nodes[0].generate(1)
         self.sync_all()
+
+        self.log.info("1\n")
 
         self.log.info("listen...")
         msg = wait_for_multipart(self.zmqSubSocket)
@@ -76,12 +83,16 @@ class ZMQTest (BitcoinTestFramework):
         msgSequence = struct.unpack('<I', msg[-1])[-1]
         assert_equal(msgSequence, 0) #must be sequence 0 on hashtx
 
+        self.log.info("2\n")
+
         msg = wait_for_multipart(self.zmqSubSocket)
         topic = msg[0]
         assert_equal(topic, b"hashwallettx-block")
         body = msg[1]
         msgSequence = struct.unpack('<I', msg[-1])[-1]
         assert_equal(msgSequence, 0) #must be sequence 0 on hashwallettx
+
+        self.log.info("3\n")
 
         msg = wait_for_multipart(self.zmqSubSocket)
         topic = msg[0]
@@ -92,6 +103,8 @@ class ZMQTest (BitcoinTestFramework):
 
         assert_equal(genhashes[0], blkhash) #blockhash from generate must be equal to the hash received over zmq
 
+        self.log.info("4\n")
+
         n = 10
         genhashes = self.nodes[1].generate(n)
         self.sync_all()
@@ -100,6 +113,7 @@ class ZMQTest (BitcoinTestFramework):
         blockcount = 0
         for x in range(0,n*2):
             msg = wait_for_multipart(self.zmqSubSocket)
+            self.log.info("5 %d\n" % x)
             topic = msg[0]
             assert_not_equal(topic, b"hashwallettx-block") # as originated from another node must not belong to node0 wallet
             assert_not_equal(topic, b"hashwallettx-mempool")
@@ -110,12 +124,16 @@ class ZMQTest (BitcoinTestFramework):
                 assert_equal(msgSequence, blockcount+1)
                 blockcount += 1
 
+        self.log.info("6\n")
+
         for x in range(0,n):
             assert_equal(genhashes[x], zmqHashes[x]) #blockhash from generate must be equal to the hash received over zmq
 
         #test tx from a second node
         hashRPC = self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1.0)
         self.sync_all()
+
+        self.log.info("7\n")
 
         # now we should receive a zmq msg because the tx was broadcast
         msg = wait_for_multipart(self.zmqSubSocket)
@@ -129,12 +147,17 @@ class ZMQTest (BitcoinTestFramework):
 
         assert_equal(hashRPC, hashZMQ) #blockhash from generate must be equal to the hash received over zmq
 
+        self.log.info("8\n")
+
         msg = wait_for_multipart(self.zmqSubSocket)
         topic = msg[0]
         assert_equal(topic, b"hashwallettx-mempool")
         body = msg[1]
         hashZMQ = bytes_to_hex_str(body)
         msgSequence = struct.unpack('<I', msg[-1])[-1]
+
+        self.log.info("9\n")
+
         assert_equal(msgSequence, 1)
         assert_equal(hashRPC, hashZMQ)
 

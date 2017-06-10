@@ -307,8 +307,8 @@ def run_tests(test_list, src_dir, build_dir, exeext, tmpdir, jobs=1, enable_cove
             logging.debug("\n%s%s%s skipped" % (BOLD[1], test_result.name, BOLD[0]))
         else:
             print("\n%s%s%s failed, Duration: %s s\n" % (BOLD[1], test_result.name, BOLD[0], test_result.time))
-            print(BOLD[1] + 'stdout:\n' + BOLD[0] + stdout + '\n')
-            print(BOLD[1] + 'stderr:\n' + BOLD[0] + stderr + '\n')
+            #print(BOLD[1] + 'stdout:\n' + BOLD[0] + stdout + '\n')
+            #print(BOLD[1] + 'stderr:\n' + BOLD[0] + stderr + '\n')
 
     print_results(test_results, max_len_name, (int(time.time() - time0)))
 
@@ -379,7 +379,7 @@ class TestHandler:
                               time.time(),
                               subprocess.Popen([self.tests_dir + test_argv[0]] + test_argv[1:] + self.flags + portseed_arg + tmpdir,
                                                universal_newlines=True,
-                                               stdout=log_stdout,
+                                               stdout=sys.stdout if t == 'zmq_test.py' else log_stdout,
                                                stderr=log_stderr),
                               log_stdout,
                               log_stderr))
