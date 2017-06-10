@@ -368,6 +368,7 @@ class TestHandler:
             # Add tests
             self.num_running += 1
             t = self.test_list.pop(0)
+            logging.debug("\n%s start" % t)
             portseed = len(self.test_list) + self.portseed_offset
             portseed_arg = ["--portseed={}".format(portseed)]
             log_stdout = tempfile.SpooledTemporaryFile(max_size=2**16)
